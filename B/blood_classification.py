@@ -89,6 +89,11 @@ class BloodClassification:
         best_model = grid_search.best_estimator_
         print(f"Best RF Params: {grid_search.best_params_}")
         
+        # Evaluate on training set
+        train_preds = best_model.predict(self.X_train)
+        train_acc = accuracy_score(self.y_train, train_preds)
+        print(f"RF Train Accuracy: {train_acc*100:.2f}%")
+
         # Evaluate on validation set
         val_preds = best_model.predict(self.X_val)
         val_acc = accuracy_score(self.y_val, val_preds)
@@ -120,6 +125,11 @@ class BloodClassification:
 
         best_model = grid_search.best_estimator_
         print(f"Best SVM Params: {grid_search.best_params_}")
+
+        # Evaluate on training set
+        train_preds = best_model.predict(self.X_train)
+        train_acc = accuracy_score(self.y_train, train_preds)
+        print(f"SVM Train Accuracy: {train_acc*100:.2f}%")
 
         # Evaluate on validation set
         val_preds = best_model.predict(self.X_val)
@@ -270,8 +280,36 @@ class BloodClassification:
             epoch_test_loss /= len(val_loader)
             test_losses.append(epoch_test_loss)
 
-        # Calculate final test accuracy
+        # Evaluate on training set
         model_final.eval()
+        train_correct = 0
+        train_total = 0
+        with torch.no_grad():
+            for inputs, targets in train_loader:
+                inputs = inputs.to(self.device)
+                targets = targets.to(self.device).long().squeeze()
+                outputs = model_final(inputs)
+                preds = torch.argmax(outputs, dim=1)
+                train_correct += (preds == targets).sum().item()
+                train_total += targets.size(0)
+        final_train_acc = train_correct / train_total
+        print(f"Final ResNet Train Accuracy: {final_train_acc*100:.2f}%")
+
+        # Evaluate on validation set
+        val_correct = 0
+        val_total = 0
+        with torch.no_grad():
+            for inputs, targets in val_loader:
+                inputs = inputs.to(self.device)
+                targets = targets.to(self.device).long().squeeze()
+                outputs = model_final(inputs)
+                preds = torch.argmax(outputs, dim=1)
+                val_correct += (preds == targets).sum().item()
+                val_total += targets.size(0)
+        final_val_acc = val_correct / val_total
+        print(f"Final ResNet Val Accuracy: {final_val_acc*100:.2f}%")
+
+        # Calculate final test accuracy
         test_correct = 0
         test_total = 0
         all_test_preds = []
